@@ -136,9 +136,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 GS_BUCKET_NAME = "fokusin-public"
 
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
+STATICFILES_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
 
 MEDIA_URL = "https://console.cloud.google.com/storage/browser/fokusin-public/"
 
 GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
-    "./django-bucket-sa.json"
+    os.path.join(BASE_DIR, "django-bucket-sa.json")
 )
