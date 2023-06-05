@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+import datetime
 
 from django.shortcuts import render
 from rest_framework import viewsets, permissions, status
@@ -8,16 +8,21 @@ from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from fokus.models import Analysis
-from fokus.serializers import AnalysisSerializer
+from fokus.models import Analysis, Image
+from fokus.serializers import AnalysisSerializer, ImageSerializer
 
 
 # Create your views here.
 class AnalysisList(APIView):
     def get(self, request, format=None):
         analyses = Analysis.objects.all()
+        total_session = datetime.timedelta(hours=0, minutes=0, seconds=0)
+        total_focused = datetime.timedelta(hours=0, minutes=0, seconds=0)
+        for analysis in analyses:
+            total_session += analysis.session_length
+            total_focused += analysis.focus_length
         serializer = AnalysisSerializer(analyses, many=True)
-        return Response(serializer.data)
+        return Response({"total_session": total_session, "total_focused": total_focused, "results": serializer.data})
 
     def post(self, request, format=None):
         data = request.data
@@ -67,4 +72,14 @@ class AnalysisDetail(APIView):
             return Response(response)
         else:
             # TODO: implement put request with images
-            pass
+            _file = request.data['file']
+            image = Image(analysis_session=analysis, image=_file)
+            # TODO: send image to model, receive analysis results
+            Image.save(image)
+            response = {
+                "analysis_id": analysis.id,
+                "focus":image.status,
+                "confindence":image.confidence
+            }
+
+            return Response(response)

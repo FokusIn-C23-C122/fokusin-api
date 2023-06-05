@@ -52,8 +52,8 @@ class Image(models.Model):
     analysis_session = models.ForeignKey(Analysis, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
     image = models.ImageField(upload_to="analysis/")
-    confidence = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(100)])
-    status = models.BooleanField()
+    confidence = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(100)], null=True)
+    status = models.BooleanField(null=True )
 
     def __str__(self):
         return f"{self.analysis_session}_{self.timestamp}"
