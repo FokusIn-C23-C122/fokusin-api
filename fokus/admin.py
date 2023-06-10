@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from fokus.models import Analysis, Image
+from fokus.models import Analysis, AnalysisImage
 
 # Register your models here.
 admin.site.register(Analysis)
-admin.site.register(Image)
+admin.site.register(AnalysisImage)
