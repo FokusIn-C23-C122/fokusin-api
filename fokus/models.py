@@ -28,7 +28,7 @@ class Analysis(models.Model):
             return 0
 
     def get_focus_length(self):
-        image_list = Image.objects.filter(analysis_session=self)
+        image_list = AnalysisImage.objects.filter(analysis_session=self)
         image_list_focus = image_list.filter(status=True)
         try:
             self.focus_length = (len(image_list_focus) / len(image_list)) * self.session_length
@@ -49,7 +49,7 @@ class Analysis(models.Model):
         return self.description
 
 
-class Image(models.Model):
+class AnalysisImage(models.Model):
     analysis_session = models.ForeignKey(Analysis, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
     image = models.ImageField(upload_to="analysis/")

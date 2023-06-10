@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from fokus.models import Analysis, Image
+from fokus.models import Analysis, AnalysisImage
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -20,7 +20,7 @@ class AnalysisSerializer(serializers.ModelSerializer):
         fields = ['date', 'time', 'description', 'session_length', 'focus_length', 'focus_percentage']
 
 
-class ImageSerializer(serializers.ModelSerializer):
+class AnalysisImageSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Image
+        model = AnalysisImage
         fields = '__all__'
