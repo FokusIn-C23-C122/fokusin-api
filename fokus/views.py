@@ -54,7 +54,7 @@ class AnalysisList(APIView):
 
 
 varian_dict = {'Fokus': 0, 'TidakFokus': 1}
-model = tf.keras.models.load_model('./1685871676.h5')
+model = tf.keras.models.load_model('./fokusin_model.h5')
 
 
 def predict_image(img_path):
