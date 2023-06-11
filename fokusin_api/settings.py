@@ -31,6 +31,7 @@ DEBUG = os.environ["DEBUG"]
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = ['https://fokusin-api-ejh5i5qlpq-et.a.run.app', 'https://*.127.0.0.1']
 
 # Application definition
 
@@ -122,8 +123,8 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': datetime.timedelta(minutes=1),
-    'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': datetime.timedelta(days=10),
+    'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=100),
 }
 
 
