@@ -21,13 +21,8 @@ from fokus.serializers import AnalysisSerializer, AnalysisImageSerializer
 class AnalysisList(APIView):
     def get(self, request, format=None):
         analyses = Analysis.objects.all()
-        total_session = datetime.timedelta(hours=0, minutes=0, seconds=0)
-        total_focused = datetime.timedelta(hours=0, minutes=0, seconds=0)
-        for analysis in analyses:
-            total_session += analysis.session_length
-            total_focused += analysis.focus_length
         serializer = AnalysisSerializer(analyses, many=True)
-        return Response({"total_session": total_session, "total_focused": total_focused, "results": serializer.data})
+        return Response(serializer.data)
 
     def post(self, request, format=None):
         data = request.data
