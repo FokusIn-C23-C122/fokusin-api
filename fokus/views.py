@@ -3,16 +3,13 @@ import datetime
 from io import BytesIO
 from urllib import request
 
-import tensorflow as tf
-from PIL import Image
-from tensorflow import keras
-from django.shortcuts import render
+import requests
+from django.utils.datastructures import MultiValueDictKeyError
 from rest_framework import viewsets, permissions, status
 from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import numpy as np
 from fokus.models import Analysis, AnalysisImage
 from fokus.serializers import AnalysisSerializer, AnalysisImageSerializer
 
@@ -20,51 +17,59 @@ from fokus.serializers import AnalysisSerializer, AnalysisImageSerializer
 # Create your views here.
 class AnalysisList(APIView):
     def get(self, request, format=None):
-        analyses = Analysis.objects.all()
+        analyses = Analysis.objects.filter(ongoing=False)
         serializer = AnalysisSerializer(analyses, many=True)
         return Response(serializer.data)
 
     def post(self, request, format=None):
         data = request.data
         if data['start'] == 'true':
-            analysis = Analysis(user=request.user,
-                                time_started=datetime.datetime.now(),
-                                description=data['description'],
-                                ongoing=True,
-                                )
+            try:
+                current_ongoing = Analysis.objects.get(ongoing=True, user=request.user)
+                current_ongoing.end_session()
+            except Analysis.DoesNotExist:
+                pass
+            except Analysis.MultipleObjectsReturned:
+                for analysis in Analysis.objects.filter(ongoing=True, user=request.user):
+                    analysis.end_session()
 
-            Analysis.save(analysis)
+            try:
+                analysis = Analysis(user=request.user,
+                                    time_started=datetime.datetime.now(),
+                                    description=data['description'],
+                                    ongoing=True,
+                                    )
 
-            response = {
-                "error": "false",
-                "message": "New session successfully created!",
-                "description": analysis.description,
-                "id": analysis.id,
-                "ongoing": analysis.ongoing,
-            }
+                Analysis.save(analysis)
 
-            return Response(response)
+                response = {
+                    "error": "false",
+                    "message": "New session successfully created!",
+                    "description": analysis.description,
+                    "id": analysis.id,
+                    "ongoing": analysis.ongoing,
+                }
+
+                return Response(response)
+            except Exception as e:
+                return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response({"message": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST)
 
-
-varian_dict = {'Fokus': 0, 'TidakFokus': 1}
-model = tf.keras.models.load_model('./fokusin_model.h5')
-
-
-def predict_image(img_path):
-    res = request.urlopen(img_path).read()
-    img = Image.open(BytesIO(res)).resize((224, 224))
-
-    img_array = tf.keras.utils.img_to_array(img)
-    img_array = img_array / 255.
-    img_array = tf.expand_dims(img_array, 0)
-
-    varian_list = list(varian_dict.keys())
-    prediction = model(img_array)
-    pred_idx = np.round(model.predict(img_array)[0][0]).astype('int')
-    pred_varian = varian_list[pred_idx]
-    return pred_varian
+    def put(self, request):
+        data = request.data
+        try:
+            analysis = Analysis.objects.get(user=request.user, ongoing=True)
+            return AnalysisDetail.as_view()(request._request, pk=analysis.id)
+        except Analysis.DoesNotExist:
+            return Response({'message': 'No currently ongoing session'}, status=status.HTTP_400_BAD_REQUEST)
+        except Analysis.MultipleObjectsReturned:
+            analysis_list = Analysis.objects.filter(ongoing=True, user=request.user).order_by('time_started')
+            print(analysis_list)
+            for analysis in analysis_list[:len(analysis_list) - 1]:
+                analysis.end_session()
+                analysis.save()
+            return self.put(request)
 
 
 class AnalysisDetail(APIView):
@@ -86,27 +91,35 @@ class AnalysisDetail(APIView):
                 "message": "Session stopped and saved!",
                 "id": analysis.id,
                 "ongoing": analysis.ongoing,
+                "time_started": analysis.time_started,
+                "session_length": str(analysis.session_length).split(".")[0],
+                "focus_length": str(analysis.focus_length).split(".")[0]
             }
 
             return Response(response)
         else:
-            # TODO: implement put request with images
-            _file = request.data['file']
-            image = AnalysisImage(analysis_session=analysis, image=_file)
-            # TODO: send image to model, receive analysis results
-            AnalysisImage.save(image)
+            try:
+                _file = request.data['file']
+                image = AnalysisImage(analysis_session=analysis, image=_file)
+                AnalysisImage.save(image)
 
-            # TODO: wrap this with try except
-            predict_result = predict_image(image.image.url)
+                predict_response = requests.post('https://fokusin-model-ejh5i5qlpq-et.a.run.app/predict',
+                                                 json={'image_url': image.image.url})
 
-            image.status = True if predict_result == "Fokus" else False
-            image.confidence = 100 if image.status else 0
-            image.save()
+                confidence = predict_response.json()['predict_image']
 
-            response = {
-                "analysis_id": analysis.id,
-                "focus": image.status,
-                "confindence": image.confidence
-            }
+                image.status = True if confidence > 0.50 else False
+                image.confidence = confidence
+                image.save()
 
-            return Response(response)
+                response = {
+                    "analysis_id": analysis.id,
+                    "focus": image.status,
+                    "confidence": image.confidence
+                }
+
+                return Response(response)
+            except MultiValueDictKeyError:
+                return Response({"message": "No image supplied"}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
