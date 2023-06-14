@@ -59,8 +59,8 @@ def path_and_rename(instance, filename):
     upload_to = 'analysis'
     ext = filename.split('.')[-1]
     username = instance.analysis_session.user.username
-    filename = '{}_{}.{}'.format(instance.analysis_session, instance.timestamp, ext)
-    return os.path.join(upload_to, username, filename)
+    filename = '{}.{}'.format(instance.timestamp, ext)
+    return os.path.join(upload_to, username, instance.analysis_session, filename)
 
 
 class AnalysisImage(models.Model):

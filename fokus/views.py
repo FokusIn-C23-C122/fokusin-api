@@ -84,6 +84,7 @@ class AnalysisDetail(APIView):
         data = request.data
         analysis = get_object_or_404(Analysis.objects.all(), pk=pk)
         if data['ongoing'] == 'false':
+            # TODO: handle if session is already stopped
             analysis.end_session()
             Analysis.save(analysis)
             response = {
@@ -99,6 +100,7 @@ class AnalysisDetail(APIView):
             return Response(response)
         else:
             try:
+                # TODO: handle if session is already stopped
                 _file = request.data['file']
                 image = AnalysisImage(analysis_session=analysis, image=_file)
                 AnalysisImage.save(image)
@@ -109,7 +111,7 @@ class AnalysisDetail(APIView):
                 confidence = predict_response.json()['predict_image']
 
                 image.status = True if confidence > 0.50 else False
-                image.confidence = confidence
+                image.confidence = confidence * 100
                 image.save()
 
                 response = {
