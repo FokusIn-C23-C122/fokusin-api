@@ -23,23 +23,19 @@ class AnalysisList(APIView):
         responses={200: AnalysisSerializer(many=True)}
     )
     def get(self, _request, format=None):
-        analyses = Analysis.objects.filter(ongoing=False)
+        analyses = Analysis.objects.filter(ongoing=False, user=_request.user)
         serializer = AnalysisSerializer(analyses, many=True)
         return Response(serializer.data)
 
     def post(self, _request, format=None):
         data = _request.data
         if data['start'] == 'true':
-            try:
-                current_ongoing = Analysis.objects.get(ongoing=True, user=_request.user)
-                current_ongoing.end_session()
-            except Analysis.DoesNotExist:
-                pass
-            except Analysis.MultipleObjectsReturned:
-                for analysis in Analysis.objects.filter(ongoing=True, user=_request.user):
-                    analysis.end_session()
+
+            analysis = None
 
             try:
+                analysis = Analysis.objects.get(ongoing=True, user=_request.user)
+            except Analysis.DoesNotExist:
                 analysis = Analysis(user=_request.user,
                                     time_started=datetime.datetime.now(),
                                     description=data['description'],
@@ -47,18 +43,22 @@ class AnalysisList(APIView):
                                     )
 
                 Analysis.save(analysis)
-
-                response = {
-                    "error": "false",
-                    "message": "New session successfully created!",
-                    "description": analysis.description,
-                    "id": analysis.id,
-                    "ongoing": analysis.ongoing,
-                }
-
-                return Response(response)
+            except Analysis.MultipleObjectsReturned:
+                for analysis in Analysis.objects.filter(ongoing=True, user=_request.user):
+                    analysis.end_session()
             except Exception as e:
                 return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            response = {
+                "error": "false",
+                "message": "New session successfully created!",
+                "description": analysis.description,
+                "id": analysis.id,
+                "ongoing": analysis.ongoing,
+            }
+
+            return Response(response)
+
         else:
             return Response({"message": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -84,7 +84,7 @@ class AnalysisDetail(APIView):
         responses={200: AnalysisSerializer(many=False)},
     )
     def get(self, _request, pk, format=None):
-        analysis = get_object_or_404(Analysis.objects.all(), pk=pk)
+        analysis = get_object_or_404(Analysis.objects.filter(user=_request.user), pk=pk)
         serializer = AnalysisSerializer(analysis)
 
         return Response(serializer.data)
@@ -95,7 +95,7 @@ class AnalysisDetail(APIView):
     )
     def put(self, _request, pk):
         data = _request.data
-        analysis = get_object_or_404(Analysis.objects.all(), pk=pk)
+        analysis = get_object_or_404(Analysis.objects.filter(user=_request.user), pk=pk)
         if data['ongoing'] == 'false':
             # TODO: handle if session is already stopped
             analysis.end_session()
