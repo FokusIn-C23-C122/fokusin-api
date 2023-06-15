@@ -5,36 +5,42 @@ from urllib import request
 
 import requests
 from django.utils.datastructures import MultiValueDictKeyError
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets, permissions, status
 from rest_framework.generics import get_object_or_404
-from rest_framework.parsers import JSONParser
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from fokus.models import Analysis, AnalysisImage
-from fokus.serializers import AnalysisSerializer, AnalysisImageSerializer
+from fokus.serializers import AnalysisSerializer, AnalysisImageSerializer, PUTImageToSessionRequestSerializer, \
+    PUTImageToSessionResponseSerializer
 
 
 # Create your views here.
 class AnalysisList(APIView):
-    def get(self, request, format=None):
+    @swagger_auto_schema(
+        responses={200: AnalysisSerializer(many=True)}
+    )
+    def get(self, _request, format=None):
         analyses = Analysis.objects.filter(ongoing=False)
         serializer = AnalysisSerializer(analyses, many=True)
         return Response(serializer.data)
 
-    def post(self, request, format=None):
-        data = request.data
+    def post(self, _request, format=None):
+        data = _request.data
         if data['start'] == 'true':
             try:
-                current_ongoing = Analysis.objects.get(ongoing=True, user=request.user)
+                current_ongoing = Analysis.objects.get(ongoing=True, user=_request.user)
                 current_ongoing.end_session()
             except Analysis.DoesNotExist:
                 pass
             except Analysis.MultipleObjectsReturned:
-                for analysis in Analysis.objects.filter(ongoing=True, user=request.user):
+                for analysis in Analysis.objects.filter(ongoing=True, user=_request.user):
                     analysis.end_session()
 
             try:
-                analysis = Analysis(user=request.user,
+                analysis = Analysis(user=_request.user,
                                     time_started=datetime.datetime.now(),
                                     description=data['description'],
                                     ongoing=True,
@@ -56,39 +62,45 @@ class AnalysisList(APIView):
         else:
             return Response({"message": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST)
 
-    def put(self, request):
-        data = request.data
+    def put(self, _request):
+        data = _request.data
         try:
-            analysis = Analysis.objects.get(user=request.user, ongoing=True)
-            return AnalysisDetail.as_view()(request._request, pk=analysis.id)
+            analysis = Analysis.objects.get(user=_request.user, ongoing=True)
+            return AnalysisDetail.as_view()(_request._request, pk=analysis.id)
         except Analysis.DoesNotExist:
             return Response({'message': 'No currently ongoing session'}, status=status.HTTP_400_BAD_REQUEST)
         except Analysis.MultipleObjectsReturned:
-            analysis_list = Analysis.objects.filter(ongoing=True, user=request.user).order_by('time_started')
+            analysis_list = Analysis.objects.filter(ongoing=True, user=_request.user).order_by('time_started')
             print(analysis_list)
             for analysis in analysis_list[:len(analysis_list) - 1]:
                 analysis.end_session()
                 analysis.save()
-            return self.put(request)
+            return self.put(_request)
 
 
 class AnalysisDetail(APIView):
-
-    def get(self, request, pk, format=None):
+    parser_classes = [MultiPartParser]
+    @swagger_auto_schema(
+        responses={200: AnalysisSerializer(many=False)},
+    )
+    def get(self, _request, pk, format=None):
         analysis = get_object_or_404(Analysis.objects.all(), pk=pk)
         serializer = AnalysisSerializer(analysis)
 
         return Response(serializer.data)
 
-    def put(self, request, pk):
-        data = request.data
+    @swagger_auto_schema(
+        request_body=PUTImageToSessionRequestSerializer,
+        responses={200: PUTImageToSessionResponseSerializer(many=False)},
+    )
+    def put(self, _request, pk):
+        data = _request.data
         analysis = get_object_or_404(Analysis.objects.all(), pk=pk)
         if data['ongoing'] == 'false':
             # TODO: handle if session is already stopped
             analysis.end_session()
             Analysis.save(analysis)
             response = {
-                "error": False,
                 "message": "Session stopped and saved!",
                 "id": analysis.id,
                 "ongoing": analysis.ongoing,
@@ -101,7 +113,7 @@ class AnalysisDetail(APIView):
         else:
             try:
                 # TODO: handle if session is already stopped
-                _file = request.data['file']
+                _file = _request.data['file']
                 image = AnalysisImage(analysis_session=analysis, image=_file)
                 AnalysisImage.save(image)
 

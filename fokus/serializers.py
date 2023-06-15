@@ -37,3 +37,16 @@ class AnalysisImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = AnalysisImage
         fields = '__all__'
+
+
+class PUTImageToSessionRequestSerializer(serializers.Serializer):
+    ongoing = serializers.BooleanField()
+    file = serializers.ImageField(allow_empty_file=True)
+
+class PUTImageToSessionResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    id = serializers.IntegerField()
+    ongoing = serializers.BooleanField()
+    time_started = serializers.DateTimeField()
+    session_length = serializers.StringRelatedField()
+    focus_length = serializers.StringRelatedField()
