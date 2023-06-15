@@ -14,7 +14,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from fokus.models import Analysis, AnalysisImage
 from fokus.serializers import AnalysisSerializer, AnalysisImageSerializer, PUTImageToSessionRequestSerializer, \
-    PUTImageToSessionResponseSerializer
+    PUTImageToSessionResponseSerializer, POSTCreateNewSessionRequestSerializer, POSTCreateNewSessionResponseSerializer, \
+    StopSessionRequestSerializer, StopSessionResponseSerializer
 
 
 # Create your views here.
@@ -27,6 +28,10 @@ class AnalysisList(APIView):
         serializer = AnalysisSerializer(analyses, many=True)
         return Response(serializer.data)
 
+    @swagger_auto_schema(
+        request_body=POSTCreateNewSessionRequestSerializer,
+        responses={201: POSTCreateNewSessionResponseSerializer(many=False)}
+    )
     def post(self, _request, format=None):
         data = _request.data
         if data['start'] == 'true':
@@ -62,6 +67,10 @@ class AnalysisList(APIView):
         else:
             return Response({"message": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST)
 
+    @swagger_auto_schema(
+        request_body=StopSessionRequestSerializer,
+        responses={200: StopSessionResponseSerializer(many=False)},
+    )
     def put(self, _request):
         try:
             analysis = Analysis.objects.get(user=_request.user, ongoing=True)
@@ -78,7 +87,7 @@ class AnalysisList(APIView):
 
 
 class AnalysisDetail(APIView):
-    parser_classes = [MultiPartParser]
+    parser_classes = [MultiPartParser, JSONParser]
     @swagger_auto_schema(
         responses={200: AnalysisSerializer(many=False)},
     )

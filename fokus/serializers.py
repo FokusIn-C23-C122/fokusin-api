@@ -40,13 +40,36 @@ class AnalysisImageSerializer(serializers.ModelSerializer):
 
 
 class PUTImageToSessionRequestSerializer(serializers.Serializer):
-    ongoing = serializers.BooleanField()
-    file = serializers.ImageField(allow_empty_file=True)
+    ongoing = "true"
+    file = serializers.ImageField()
 
-class PUTImageToSessionResponseSerializer(serializers.Serializer):
-    message = serializers.CharField()
+
+class StopSessionRequestSerializer(serializers.Serializer):
+    ongoing = "false"
+
+
+class StopSessionResponseSerializer(serializers.Serializer):
+    message = "Session stopped and saved!"
     id = serializers.IntegerField()
-    ongoing = serializers.BooleanField()
+    ongoing = False
     time_started = serializers.DateTimeField()
     session_length = serializers.StringRelatedField()
     focus_length = serializers.StringRelatedField()
+
+
+class PUTImageToSessionResponseSerializer(serializers.Serializer):
+    analysis_id = serializers.IntegerField()
+    focus = serializers.BooleanField()
+    confidence = serializers.FloatField()
+
+
+class POSTCreateNewSessionRequestSerializer(serializers.Serializer):
+    start = serializers.CharField()
+    description = serializers.CharField()
+
+
+class POSTCreateNewSessionResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    description = serializers.CharField()
+    id = serializers.IntegerField()
+    ongoing = serializers.CharField()

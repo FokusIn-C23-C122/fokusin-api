@@ -1,4 +1,6 @@
 from django.shortcuts import render
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,6 +12,9 @@ from user.serializers import LoginSerializer, RegisterSerializer, LogoutSerializ
 class RegisterView(APIView):
     serializer_class = RegisterSerializer
 
+    @swagger_auto_schema(
+        request_body=RegisterSerializer,
+    )
     def post(self, request):
         user = request.data
         serializer = self.serializer_class(data=user)
@@ -22,6 +27,9 @@ class RegisterView(APIView):
 class LoginAPIView(APIView):
     serializer_class = LoginSerializer
 
+    @swagger_auto_schema(
+        request_body=LoginSerializer,
+    )
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -32,6 +40,9 @@ class LogoutAPIView(APIView):
     serializer_class = LogoutSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
+    @swagger_auto_schema(
+        request_body=LogoutSerializer,
+    )
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
