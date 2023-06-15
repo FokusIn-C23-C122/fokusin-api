@@ -63,7 +63,6 @@ class AnalysisList(APIView):
             return Response({"message": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, _request):
-        data = _request.data
         try:
             analysis = Analysis.objects.get(user=_request.user, ongoing=True)
             return AnalysisDetail.as_view()(_request._request, pk=analysis.id)
