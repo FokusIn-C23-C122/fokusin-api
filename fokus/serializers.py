@@ -15,12 +15,6 @@ class DurationFieldNoMicrosecond(serializers.DurationField):
         return value.seconds
 
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username']
-
-
 class AnalysisSerializer(serializers.ModelSerializer):
     date = serializers.DateField(source='get_date')
     time = serializers.TimeField(source='get_time')

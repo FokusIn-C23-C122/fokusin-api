@@ -22,7 +22,7 @@ from rest_framework import permissions
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="Vessel Maintenance Backend API",
+        title="FokusIn Backend API",
         default_version='v1',
     ),
     public=True,

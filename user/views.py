@@ -5,10 +5,19 @@ from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from user.serializers import LoginSerializer, RegisterSerializer, LogoutSerializer
+from user.serializers import LoginSerializer, RegisterSerializer, LogoutSerializer, UserSerializer
 
 
 # Create your views here.
+
+class UserView(APIView):
+    serializer_class = UserSerializer
+
+    def get(self, request):
+        serializer = self.serializer_class(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class RegisterView(APIView):
     serializer_class = RegisterSerializer
 
